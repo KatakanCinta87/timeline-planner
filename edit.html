@@ -216,11 +216,18 @@
 
   <script>
     const STORAGE_KEY = 'timeline_planner_tasks_v2';
+    const MAX_FILE_BYTES = 1_200_000;
+    const MAX_TASK_ATTACH_BYTES = 3_000_000;
+    const STORAGE_WARN_BYTES = 3_500_000;
     const ALLOWED_FILE_TYPES = new Set([
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ]);
+    const ALLOWED_EXTENSIONS = new Set([
+      '.docx', '.pdf', '.xlsx', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'
+    ]);
+    let storageWarned = false;
 
     const id = new URLSearchParams(window.location.search).get('id');
     const missingEl = document.getElementById('missing');
@@ -242,8 +249,22 @@
       }
     }
 
+    function estimateStorageBytes(nextTasks) {
+      return new Blob([JSON.stringify(nextTasks)]).size;
+    }
+
     function saveTasks(nextTasks) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextTasks));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextTasks));
+        if (!storageWarned && estimateStorageBytes(nextTasks) >= STORAGE_WARN_BYTES) {
+          storageWarned = true;
+          alert('Data mulai besar. Pertimbangkan mengurangi lampiran.');
+        }
+        return true;
+      } catch {
+        alert('Gagal menyimpan data. Kurangi ukuran lampiran atau hapus beberapa task.');
+        return false;
+      }
     }
 
     function formatDate(dateStr) {
@@ -265,8 +286,21 @@
       return new Date(dateStr + 'T00:00:00');
     }
 
+    function getFileExt(fileName) {
+      const idx = fileName.lastIndexOf('.');
+      if (idx === -1) return '';
+      return fileName.slice(idx).toLowerCase();
+    }
+
     function isAllowedFile(file) {
-      return file.type.startsWith('image/') || ALLOWED_FILE_TYPES.has(file.type);
+      return file.type.startsWith('image/') || ALLOWED_FILE_TYPES.has(file.type) || ALLOWED_EXTENSIONS.has(getFileExt(file.name));
+    }
+
+    function estimateAttachmentBytes(att) {
+      if (Number.isFinite(Number(att.size))) return Number(att.size);
+      const dataUrl = String(att.dataUrl || '');
+      const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+      return Math.floor((base64.length * 3) / 4);
     }
 
     function readFileAsDataUrl(file) {
@@ -281,11 +315,16 @@
     async function filesToAttachments(fileList) {
       const files = Array.from(fileList || []);
       const attachments = [];
-      let skipped = 0;
+      let skippedType = 0;
+      let skippedSize = 0;
 
       for (const f of files) {
         if (!isAllowedFile(f)) {
-          skipped += 1;
+          skippedType += 1;
+          continue;
+        }
+        if (f.size > MAX_FILE_BYTES) {
+          skippedSize += 1;
           continue;
         }
         const dataUrl = await readFileAsDataUrl(f);
@@ -297,7 +336,7 @@
         });
       }
 
-      return { attachments, skipped };
+      return { attachments, skippedType, skippedSize };
     }
 
     function renderAttachments() {
@@ -366,8 +405,11 @@
         }
 
         const uploaded = await filesToAttachments(newAttachmentsInput.files);
-        if (uploaded.skipped > 0) {
-          alert(`${uploaded.skipped} file dilewati karena extension/tipe tidak didukung.`);
+        if (uploaded.skippedType > 0) {
+          alert(`${uploaded.skippedType} file dilewati karena extension/tipe tidak didukung.`);
+        }
+        if (uploaded.skippedSize > 0) {
+          alert(`${uploaded.skippedSize} file dilewati karena ukuran > ${Math.round(MAX_FILE_BYTES / 1024)} KB.`);
         }
 
         target.name = name;
@@ -380,9 +422,17 @@
           target.progress = 100;
         }
 
-        target.attachments = [...workingAttachments, ...uploaded.attachments];
+        const mergedAttachments = [...workingAttachments, ...uploaded.attachments];
+        const totalAttachBytes = mergedAttachments.reduce((sum, f) => sum + estimateAttachmentBytes(f), 0);
+        if (totalAttachBytes > MAX_TASK_ATTACH_BYTES) {
+          alert(`Total lampiran task melebihi batas ${Math.round(MAX_TASK_ATTACH_BYTES / 1024)} KB.`);
+          return;
+        }
 
-        saveTasks(tasks);
+        target.attachments = mergedAttachments;
+
+        const ok = saveTasks(tasks);
+        if (!ok) return;
         window.location.href = `task.html?id=${encodeURIComponent(id)}`;
       });
     }

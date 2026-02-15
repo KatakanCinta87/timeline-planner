@@ -318,11 +318,14 @@
     </div>
   </dialog>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
-  <script>
+  <script type="module">
+    import * as XLSX from 'xlsx';
+    import { jsPDF } from 'jspdf';
+    import autoTable from 'jspdf-autotable';
+
     const STORAGE_KEY = 'timeline_planner_tasks_v2';
+    const STORAGE_WARN_BYTES = 3_500_000;
+    let storageWarned = false;
     const taskRows = document.getElementById('taskRows');
     const timeline = document.getElementById('timeline');
     const meta = document.getElementById('meta');
@@ -421,6 +424,24 @@
     let tasks = loadTasks();
     seedInitialDatasetIfEmpty();
 
+    function estimateStorageBytes(nextTasks) {
+      return new Blob([JSON.stringify(nextTasks)]).size;
+    }
+
+    function persistTasks(nextTasks) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextTasks));
+        if (!storageWarned && estimateStorageBytes(nextTasks) >= STORAGE_WARN_BYTES) {
+          storageWarned = true;
+          alert('Data mulai besar. Kurangi lampiran agar penyimpanan browser tidak cepat penuh.');
+        }
+        return true;
+      } catch {
+        alert('Gagal menyimpan data. Kurangi ukuran lampiran atau hapus beberapa task.');
+        return false;
+      }
+    }
+
     function loadTasks() {
       try {
         const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -440,9 +461,7 @@
             attachments: Array.isArray(t.attachments) ? t.attachments : []
           };
         });
-        if (dirty) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
-        }
+        if (dirty) persistTasks(mapped);
         return mapped;
       } catch {
         return [];
@@ -450,7 +469,7 @@
     }
 
     function saveTasks() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      return persistTasks(tasks);
     }
 
     function generatePlanForRange(rangeStart, rangeEnd) {
@@ -678,10 +697,6 @@
     }
 
     function exportXlsx() {
-      if (!window.XLSX) {
-        alert('Library XLSX belum termuat.');
-        return;
-      }
       const xlsxRows = exportRows().map(r => ({
         No: r.no,
         Task: r.task,
@@ -694,18 +709,13 @@
         Lampiran: r.attachments || '-',
         DetailURL: r.detailUrl
       }));
-      const sheet = window.XLSX.utils.json_to_sheet(xlsxRows);
-      const wb = window.XLSX.utils.book_new();
-      window.XLSX.utils.book_append_sheet(wb, sheet, 'Tasks');
-      window.XLSX.writeFile(wb, 'timeline-planner-export.xlsx');
+      const sheet = XLSX.utils.json_to_sheet(xlsxRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, sheet, 'Tasks');
+      XLSX.writeFile(wb, 'timeline-planner-export.xlsx');
     }
 
     function exportPdf() {
-      if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert('Library PDF belum termuat.');
-        return;
-      }
-      const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
       doc.setFontSize(14);
       doc.text('Timeline Planner Export', 40, 36);
@@ -723,7 +733,7 @@
         r.detailUrl
       ]);
 
-      doc.autoTable({
+      autoTable(doc, {
         head: [['No', 'Task', 'Description', 'Start', 'End', 'Progress', 'Status', 'Done', 'Attachments', 'Detail URL']],
         body,
         startY: 50,

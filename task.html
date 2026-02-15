@@ -201,11 +201,14 @@
     </section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
-  <script>
+  <script type="module">
+    import * as XLSX from 'xlsx';
+    import { jsPDF } from 'jspdf';
+    import autoTable from 'jspdf-autotable';
+
     const STORAGE_KEY = 'timeline_planner_tasks_v2';
+    const STORAGE_WARN_BYTES = 3_500_000;
+    let storageWarned = false;
     const id = new URLSearchParams(window.location.search).get('id');
     const missingEl = document.getElementById('missing');
     const contentEl = document.getElementById('content');
@@ -213,6 +216,10 @@
     const editLink = document.getElementById('editLink');
     const detailExportBtn = document.getElementById('detailExportBtn');
     const detailExportType = document.getElementById('detailExportType');
+
+    function estimateStorageBytes(nextTasks) {
+      return new Blob([JSON.stringify(nextTasks)]).size;
+    }
 
     function loadTasks() {
       try {
@@ -223,7 +230,17 @@
     }
 
     function saveTasks(tasks) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        if (!storageWarned && estimateStorageBytes(tasks) >= STORAGE_WARN_BYTES) {
+          storageWarned = true;
+          alert('Data mulai besar. Pertimbangkan mengurangi lampiran.');
+        }
+        return true;
+      } catch {
+        alert('Gagal menyimpan data. Kurangi ukuran lampiran atau hapus beberapa task.');
+        return false;
+      }
     }
 
     function statusLabel(status) {
@@ -294,12 +311,8 @@
     }
 
     function exportTaskXlsx(task) {
-      if (!window.XLSX) {
-        alert('Library XLSX belum termuat.');
-        return;
-      }
       const r = taskExportRow(task);
-      const sheet = window.XLSX.utils.json_to_sheet([{
+      const sheet = XLSX.utils.json_to_sheet([{
         ID: r.id,
         Task: r.task,
         Deskripsi: r.description,
@@ -311,23 +324,18 @@
         Lampiran: r.attachments || '-',
         DetailURL: r.detailUrl
       }]);
-      const wb = window.XLSX.utils.book_new();
-      window.XLSX.utils.book_append_sheet(wb, sheet, 'Task');
-      window.XLSX.writeFile(wb, `task-${task.id || 'detail'}.xlsx`);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, sheet, 'Task');
+      XLSX.writeFile(wb, `task-${task.id || 'detail'}.xlsx`);
     }
 
     function exportTaskPdf(task) {
-      if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert('Library PDF belum termuat.');
-        return;
-      }
-      const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
       const r = taskExportRow(task);
 
       doc.setFontSize(14);
       doc.text('Task Detail Export', 40, 36);
-      doc.autoTable({
+      autoTable(doc, {
         head: [['ID', 'Task', 'Description', 'Start', 'End', 'Progress', 'Status', 'Done', 'Attachments', 'Detail URL']],
         body: [[
           r.id,
