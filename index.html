@@ -319,7 +319,7 @@
   </dialog>
 
   <script type="module">
-    import * as XLSX from 'xlsx';
+    import ExcelJS from 'exceljs';
     import { jsPDF } from 'jspdf';
     import autoTable from 'jspdf-autotable';
 
@@ -696,7 +696,7 @@
       triggerDownload(blob, 'timeline-planner-export.json');
     }
 
-    function exportXlsx() {
+    async function exportXlsx() {
       const xlsxRows = exportRows().map(r => ({
         No: r.no,
         Task: r.task,
@@ -709,10 +709,26 @@
         Lampiran: r.attachments || '-',
         DetailURL: r.detailUrl
       }));
-      const sheet = XLSX.utils.json_to_sheet(xlsxRows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, sheet, 'Tasks');
-      XLSX.writeFile(wb, 'timeline-planner-export.xlsx');
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Tasks');
+      ws.columns = [
+        { header: 'No', key: 'No', width: 8 },
+        { header: 'Task', key: 'Task', width: 30 },
+        { header: 'Deskripsi', key: 'Deskripsi', width: 45 },
+        { header: 'Mulai', key: 'Mulai', width: 16 },
+        { header: 'Selesai', key: 'Selesai', width: 16 },
+        { header: 'Progress', key: 'Progress', width: 12 },
+        { header: 'Status', key: 'Status', width: 16 },
+        { header: 'SelesaiChecklist', key: 'SelesaiChecklist', width: 18 },
+        { header: 'Lampiran', key: 'Lampiran', width: 30 },
+        { header: 'DetailURL', key: 'DetailURL', width: 38 }
+      ];
+      xlsxRows.forEach(row => ws.addRow(row));
+      const buffer = await wb.xlsx.writeBuffer();
+      triggerDownload(
+        new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        'timeline-planner-export.xlsx'
+      );
     }
 
     function exportPdf() {
@@ -755,10 +771,10 @@
       render();
     });
 
-    exportBtn.addEventListener('click', () => {
+    exportBtn.addEventListener('click', async () => {
       const type = exportType.value;
       if (type === 'xlsx') {
-        exportXlsx();
+        await exportXlsx();
         return;
       }
       if (type === 'pdf') {

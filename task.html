@@ -202,7 +202,7 @@
   </main>
 
   <script type="module">
-    import * as XLSX from 'xlsx';
+    import ExcelJS from 'exceljs';
     import { jsPDF } from 'jspdf';
     import autoTable from 'jspdf-autotable';
 
@@ -310,9 +310,23 @@
       triggerDownload(blob, `task-${task.id || 'detail'}.json`);
     }
 
-    function exportTaskXlsx(task) {
+    async function exportTaskXlsx(task) {
       const r = taskExportRow(task);
-      const sheet = XLSX.utils.json_to_sheet([{
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Task');
+      ws.columns = [
+        { header: 'ID', key: 'ID', width: 38 },
+        { header: 'Task', key: 'Task', width: 30 },
+        { header: 'Deskripsi', key: 'Deskripsi', width: 45 },
+        { header: 'Mulai', key: 'Mulai', width: 16 },
+        { header: 'Selesai', key: 'Selesai', width: 16 },
+        { header: 'Progress', key: 'Progress', width: 12 },
+        { header: 'Status', key: 'Status', width: 16 },
+        { header: 'SelesaiChecklist', key: 'SelesaiChecklist', width: 18 },
+        { header: 'Lampiran', key: 'Lampiran', width: 30 },
+        { header: 'DetailURL', key: 'DetailURL', width: 38 }
+      ];
+      ws.addRow({
         ID: r.id,
         Task: r.task,
         Deskripsi: r.description,
@@ -323,10 +337,12 @@
         SelesaiChecklist: r.checked,
         Lampiran: r.attachments || '-',
         DetailURL: r.detailUrl
-      }]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, sheet, 'Task');
-      XLSX.writeFile(wb, `task-${task.id || 'detail'}.xlsx`);
+      });
+      const buffer = await wb.xlsx.writeBuffer();
+      triggerDownload(
+        new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        `task-${task.id || 'detail'}.xlsx`
+      );
     }
 
     function exportTaskPdf(task) {
@@ -424,12 +440,12 @@
         renderTask(tasks[idx]);
       });
 
-      detailExportBtn.addEventListener('click', () => {
+      detailExportBtn.addEventListener('click', async () => {
         const currentTask = tasks[idx];
         if (!currentTask) return;
         const type = detailExportType.value;
         if (type === 'xlsx') {
-          exportTaskXlsx(currentTask);
+          await exportTaskXlsx(currentTask);
           return;
         }
         if (type === 'pdf') {
