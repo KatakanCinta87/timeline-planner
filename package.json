@@ -1,0 +1,14 @@
+{
+  "name": "timeline-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static timeline planner environment for index.html and task.html",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
+}

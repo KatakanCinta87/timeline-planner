@@ -1,0 +1,815 @@
+﻿<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timeline Planner</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #10233a;
+      --muted: #607287;
+      --line: #d7e2ee;
+      --primary: #0b7a75;
+      --accent: #f2a900;
+      --done: #1f9d55;
+      --risk: #c2410c;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 20%, #e9f5ff 0%, transparent 30%),
+        radial-gradient(circle at 80% 0%, #fff0d8 0%, transparent 25%),
+        var(--bg);
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 24px auto;
+      padding: 0 16px 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(9, 30, 66, 0.06);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(20px, 3vw, 30px);
+    }
+
+    .sub { color: var(--muted); margin-top: 4px; }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    input, select, button, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      font: inherit;
+      background: #fff;
+    }
+    textarea { resize: vertical; min-height: 42px; }
+
+    button {
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover { filter: brightness(0.95); }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .controls > * { flex: 1 1 200px; }
+
+    .table-wrap {
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      padding: 10px 8px;
+      vertical-align: middle;
+      font-size: 14px;
+    }
+
+    th { color: var(--muted); font-weight: 600; }
+
+    .status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .st-plan { background: #e8f0ff; color: #2647a6; }
+    .st-doing { background: #fff3d8; color: #975a00; }
+    .st-done { background: #ddf7e6; color: #1f7a42; }
+
+    .btn-small {
+      width: auto;
+      padding: 6px 9px;
+      font-size: 12px;
+      margin-right: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+    }
+
+    .timeline {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .time-header, .time-row {
+      display: grid;
+      grid-template-columns: 220px repeat(var(--days), minmax(24px, 1fr));
+      min-width: max(900px, calc(220px + (var(--days) * 24px)));
+    }
+
+    .time-header {
+      position: sticky;
+      top: 0;
+      background: #f8fbff;
+      border-bottom: 1px solid var(--line);
+      z-index: 2;
+    }
+
+    .time-cell {
+      padding: 8px;
+      border-right: 1px solid #edf2f8;
+      font-size: 12px;
+      text-align: center;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .time-title {
+      font-weight: 600;
+      color: var(--text);
+      text-align: left;
+      position: sticky;
+      left: 0;
+      background: #fff;
+      z-index: 1;
+      border-right: 1px solid var(--line);
+    }
+
+    .time-row .time-title { background: #fff; }
+
+    .day {
+      height: 38px;
+      border-right: 1px solid #f0f4fa;
+      position: relative;
+    }
+
+    .today {
+      background: rgba(242, 169, 0, 0.16);
+    }
+
+    .bar {
+      position: absolute;
+      top: 8px;
+      bottom: 8px;
+      left: 0;
+      right: 0;
+      border-radius: 6px;
+      opacity: 0.95;
+    }
+
+    .bar.plan { background: #6d9eea; }
+    .bar.doing { background: var(--accent); }
+    .bar.done { background: var(--done); }
+
+    .meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    dialog {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0;
+      width: min(460px, 92vw);
+    }
+
+    dialog::backdrop {
+      background: rgba(16, 35, 58, 0.28);
+    }
+
+    .dialog-body {
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .dialog-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 900px) {
+      form { grid-template-columns: 1fr 1fr; }
+      .time-header, .time-row { grid-template-columns: 170px repeat(var(--days), minmax(24px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>Timeline Planner</h1>
+      <div class="sub">Pantau rencana harian/mingguan langsung dari komputer kamu.</div>
+    </section>
+
+    <section class="card">
+      <div class="controls" style="margin-top:0;">
+        <a href="added_task.html" style="flex:1 1 420px;text-decoration:none;">
+          <button type="button" style="width:100%;">Tambah Task</button>
+        </a>
+        <button type="button" id="loadPlanBtn" class="btn-small">Load Plan (Pilih Tanggal)</button>
+        <select id="exportType" class="btn-small" style="width:auto;">
+          <option value="json">Export JSON</option>
+          <option value="xlsx">Export XLSX</option>
+          <option value="pdf">Export PDF</option>
+        </select>
+        <button type="button" id="exportBtn" class="btn-small">Export</button>
+        <button type="button" id="clearBtn" class="btn-small">Hapus Semua</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="controls">
+        <input id="search" placeholder="Cari task / deskripsi" />
+        <select id="filterStatus">
+          <option value="all">Semua Status</option>
+          <option value="plan">Planned</option>
+          <option value="doing">In Progress</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div class="table-wrap" style="margin-top:10px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Done</th>
+              <th>Task</th>
+              <th>Deskripsi</th>
+              <th>Mulai</th>
+              <th>Selesai</th>
+              <th>Progress</th>
+              <th>Status</th>
+              <th>Lampiran</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="taskRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div id="timeline" class="timeline"></div>
+      <div class="meta" id="meta"></div>
+    </section>
+  </main>
+
+  <dialog id="planDialog">
+    <div class="dialog-body">
+      <h3 style="margin:0;">Load Plan</h3>
+      <div style="color:#607287;font-size:13px;">Pilih rentang tanggal untuk generate template plan.</div>
+      <div>
+        <label for="planStart">Tanggal Mulai</label>
+        <input id="planStart" type="date" />
+      </div>
+      <div>
+        <label for="planEnd">Tanggal Selesai</label>
+        <input id="planEnd" type="date" />
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn-small" id="planCancelBtn">Batal</button>
+        <button type="button" id="planApplyBtn">Terapkan Plan</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script>
+    const STORAGE_KEY = 'timeline_planner_tasks_v2';
+    const taskRows = document.getElementById('taskRows');
+    const timeline = document.getElementById('timeline');
+    const meta = document.getElementById('meta');
+    const searchInput = document.getElementById('search');
+    const filterStatus = document.getElementById('filterStatus');
+    const clearBtn = document.getElementById('clearBtn');
+    const exportType = document.getElementById('exportType');
+    const exportBtn = document.getElementById('exportBtn');
+    const loadPlanBtn = document.getElementById('loadPlanBtn');
+    const planDialog = document.getElementById('planDialog');
+    const planStartInput = document.getElementById('planStart');
+    const planEndInput = document.getElementById('planEnd');
+    const planCancelBtn = document.getElementById('planCancelBtn');
+    const planApplyBtn = document.getElementById('planApplyBtn');
+
+    const PLAN_TEMPLATE = [
+      {
+        name: 'Define Experiment Direction',
+        description: 'Pilih 1 platform (IG/TikTok), tentukan niche sempit, KPI utama, dan setup sheet tracking.',
+        startOffset: 0,
+        endOffset: 0,
+        status: 'plan'
+      },
+      {
+        name: 'Setup Tracking System',
+        description: 'Buat kolom tracking, template evaluasi harian, dan struktur folder dokumentasi.',
+        startOffset: 0,
+        endOffset: 1,
+        status: 'plan'
+      },
+      {
+        name: 'Content Production Batch 1',
+        description: 'Brainstorm hook, produksi 6-8 konten, edit, dan siapkan caption/CTA.',
+        startOffset: 1,
+        endOffset: 3,
+        status: 'plan'
+      },
+      {
+        name: 'Publish & Track Batch 1',
+        description: 'Publish konten batch 1 dan catat performa 24 jam pertama.',
+        startOffset: 2,
+        endOffset: 4,
+        status: 'plan'
+      },
+      {
+        name: 'Performance Analysis Sprint 1',
+        description: 'Evaluasi hook terbaik, format terlemah, dan hasilkan insight utama.',
+        startOffset: 5,
+        endOffset: 6,
+        status: 'plan'
+      },
+      {
+        name: 'Content Production Batch 2',
+        description: 'Eksekusi perbaikan dari insight sprint 1 untuk batch konten berikutnya.',
+        startOffset: 7,
+        endOffset: 10,
+        status: 'plan'
+      },
+      {
+        name: 'Publish & Track Batch 2',
+        description: 'Publish batch 2, monitor performa, dan simpan bukti data.',
+        startOffset: 9,
+        endOffset: 12,
+        status: 'plan'
+      },
+      {
+        name: 'Landing Page & Positioning Update',
+        description: 'Perbarui section layanan/progres dan mini case study terbaru.',
+        startOffset: 13,
+        endOffset: 15,
+        status: 'plan'
+      },
+      {
+        name: 'AI Automation Iteration',
+        description: 'Bangun flow otomatisasi ringan, test, dan dokumentasikan hasil.',
+        startOffset: 0,
+        endOffset: 20,
+        status: 'doing'
+      },
+      {
+        name: 'Performance Analysis Sprint 2',
+        description: 'Bandingkan batch 1 vs batch 2 dan finalisasi strategi konten.',
+        startOffset: 16,
+        endOffset: 18,
+        status: 'plan'
+      },
+      {
+        name: 'Scale Plan for Next Cycle',
+        description: 'Susun plan 30 hari berikutnya berdasarkan metrik validasi.',
+        startOffset: 19,
+        endOffset: 27,
+        status: 'plan'
+      }
+    ];
+
+    let tasks = loadTasks();
+    seedInitialDatasetIfEmpty();
+
+    function loadTasks() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        let dirty = false;
+        const mapped = raw.map(t => {
+          const hasId = Boolean(t.id);
+          if (!hasId) dirty = true;
+          return {
+            id: hasId ? t.id : crypto.randomUUID(),
+            name: t.name || '',
+            description: t.description ?? t.owner ?? '',
+            start: t.start || '',
+            end: t.end || '',
+            progress: Number.isFinite(Number(t.progress)) ? Number(t.progress) : 0,
+            status: ['plan', 'doing', 'done'].includes(t.status) ? t.status : 'plan',
+            checked: Boolean(t.checked),
+            attachments: Array.isArray(t.attachments) ? t.attachments : []
+          };
+        });
+        if (dirty) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
+        }
+        return mapped;
+      } catch {
+        return [];
+      }
+    }
+
+    function saveTasks() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    function generatePlanForRange(rangeStart, rangeEnd) {
+      const startDate = normalize(rangeStart);
+      const endDate = normalize(rangeEnd);
+      const totalDays = Math.max(0, dayDiff(rangeStart, rangeEnd));
+      const templateMaxOffset = PLAN_TEMPLATE.reduce((m, t) => Math.max(m, t.endOffset), 0) || 1;
+
+      return PLAN_TEMPLATE.map(item => ({
+        id: crypto.randomUUID(),
+        name: item.name,
+        description: item.description,
+        start: toISO(addDays(startDate, Math.round((item.startOffset / templateMaxOffset) * totalDays))),
+        end: toISO(addDays(startDate, Math.round((item.endOffset / templateMaxOffset) * totalDays))),
+        progress: 0,
+        status: item.status || 'plan',
+        checked: false,
+        attachments: []
+      })).map(t => {
+        if (normalize(t.end) < normalize(t.start)) t.end = t.start;
+        if (normalize(t.end) > endDate) t.end = toISO(endDate);
+        return t;
+      });
+    }
+
+    function getPlanRange(plan) {
+      if (!Array.isArray(plan) || plan.length === 0) return '-';
+      const minStart = plan.reduce((m, t) => normalize(t.start) < m ? normalize(t.start) : m, normalize(plan[0].start));
+      const maxEnd = plan.reduce((m, t) => normalize(t.end) > m ? normalize(t.end) : m, normalize(plan[0].end));
+      return `${formatDate(toISO(minStart))} - ${formatDate(toISO(maxEnd))}`;
+    }
+
+    function seedInitialDatasetIfEmpty() {
+      if (tasks.length > 0) return;
+      const today = toISO(new Date());
+      const end = toISO(addDays(new Date(), 27));
+      tasks = generatePlanForRange(today, end);
+      saveTasks();
+    }
+
+    function statusLabel(status) {
+      if (status === 'doing') return 'In Progress';
+      if (status === 'done') return 'Done';
+      return 'Planned';
+    }
+
+    function formatDate(dateStr) {
+      return new Date(dateStr + 'T00:00:00').toLocaleDateString('id-ID', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      });
+    }
+
+    function normalize(dateStr) {
+      return new Date(dateStr + 'T00:00:00');
+    }
+
+    function dayDiff(a, b) {
+      const ms = normalize(b) - normalize(a);
+      return Math.round(ms / 86400000);
+    }
+
+    function addDays(date, n) {
+      const d = new Date(date);
+      d.setDate(d.getDate() + n);
+      return d;
+    }
+
+    function toISO(date) {
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${date.getFullYear()}-${m}-${d}`;
+    }
+
+    function render() {
+      const q = searchInput.value.trim().toLowerCase();
+      const st = filterStatus.value;
+      const filtered = tasks
+        .filter(t => st === 'all' || t.status === st)
+        .filter(t => !q || `${t.name} ${t.description}`.toLowerCase().includes(q))
+        .sort((a, b) => normalize(a.start) - normalize(b.start));
+
+      renderTable(filtered);
+      renderTimeline(filtered);
+    }
+
+    function renderTable(list) {
+      if (list.length === 0) {
+        taskRows.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#607287;">Belum ada task.</td></tr>';
+        return;
+      }
+
+      taskRows.innerHTML = list.map(t => {
+        const badgeClass = t.status === 'doing' ? 'st-doing' : t.status === 'done' ? 'st-done' : 'st-plan';
+        const deco = t.checked ? 'style="text-decoration:line-through;color:#607287;"' : '';
+        const attachments = (t.attachments || []).length
+          ? t.attachments.map((f, idx) => `<a href="${f.dataUrl}" download="${escapeHtml(f.name)}" style="display:block;font-size:12px;">${escapeHtml(f.name)}</a>`).join('')
+          : '<span style="color:#607287;">-</span>';
+
+        return `
+          <tr>
+            <td><input type="checkbox" ${t.checked ? 'checked' : ''} onchange="toggleCheck('${t.id}', this.checked)" /></td>
+            <td ${deco}><a href="${taskDetailUrl(t.id)}">${escapeHtml(t.name)}</a></td>
+            <td>${escapeHtml(t.description || '-')}</td>
+            <td>${formatDate(t.start)}</td>
+            <td>${formatDate(t.end)}</td>
+            <td>${Number(t.progress)}%</td>
+            <td><span class="status ${badgeClass}">${statusLabel(t.status)}</span></td>
+            <td>${attachments}</td>
+            <td>
+              <a href="${editTaskUrl(t.id)}"><button class="btn-small" type="button">Edit</button></a>
+              <button class="btn-small" onclick="removeTask('${t.id}')">Hapus</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function taskDetailUrl(id) {
+      return `task.html?id=${encodeURIComponent(id)}`;
+    }
+
+    function editTaskUrl(id) {
+      return `edit.html?id=${encodeURIComponent(id)}`;
+    }
+
+    function renderTimeline(list) {
+      if (list.length === 0) {
+        timeline.innerHTML = '<div style="padding:14px;color:#607287;">Timeline akan tampil setelah task ditambahkan.</div>';
+        meta.textContent = 'Total task: 0';
+        return;
+      }
+
+      const minStart = list.reduce((m, t) => normalize(t.start) < m ? normalize(t.start) : m, normalize(list[0].start));
+      const maxEnd = list.reduce((m, t) => normalize(t.end) > m ? normalize(t.end) : m, normalize(list[0].end));
+      const days = dayDiff(toISO(minStart), toISO(maxEnd)) + 1;
+
+      timeline.style.setProperty('--days', String(days));
+
+      const todayISO = toISO(new Date());
+      const header = ['<div class="time-header"><div class="time-cell time-title">Task</div>'];
+      for (let i = 0; i < days; i++) {
+        const d = addDays(minStart, i);
+        const iso = toISO(d);
+        const cls = iso === todayISO ? 'time-cell today' : 'time-cell';
+        header.push(`<div class="${cls}">${d.getDate()}/${d.getMonth() + 1}</div>`);
+      }
+      header.push('</div>');
+
+      const rows = list.map(t => {
+        const sOffset = dayDiff(toISO(minStart), t.start);
+        const eOffset = dayDiff(toISO(minStart), t.end);
+        const barClass = t.checked || t.status === 'done' ? 'done' : t.status === 'doing' ? 'doing' : 'plan';
+
+        const cells = ['<div class="time-row">'];
+        cells.push(`<div class="time-cell time-title">${escapeHtml(t.name)} <span style="color:#607287;">(${Number(t.progress)}%)</span></div>`);
+
+        for (let i = 0; i < days; i++) {
+          const date = addDays(minStart, i);
+          const iso = toISO(date);
+          const isToday = iso === todayISO ? ' today' : '';
+          let bar = '';
+          if (i >= sOffset && i <= eOffset) {
+            bar = `<div class="bar ${barClass}"></div>`;
+          }
+          cells.push(`<div class="day${isToday}">${bar}</div>`);
+        }
+
+        cells.push('</div>');
+        return cells.join('');
+      });
+
+      const completed = list.filter(t => t.checked || t.status === 'done').length;
+      timeline.innerHTML = header.join('') + rows.join('');
+      meta.textContent = `Total task: ${list.length} | Selesai: ${completed} | Rentang: ${formatDate(toISO(minStart))} - ${formatDate(toISO(maxEnd))}`;
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function exportRows() {
+      return tasks.map((t, idx) => ({
+        no: idx + 1,
+        id: t.id,
+        task: t.name,
+        description: t.description || '',
+        start: t.start || '',
+        end: t.end || '',
+        progress: Number(t.progress),
+        status: statusLabel(t.status),
+        checked: Boolean(t.checked) ? 'Yes' : 'No',
+        attachments: (t.attachments || []).map(f => f.name).join(', '),
+        detailUrl: taskDetailUrl(t.id)
+      }));
+    }
+
+    function formatDateSafe(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + 'T00:00:00');
+      if (Number.isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    function triggerDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportJson() {
+      const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+      triggerDownload(blob, 'timeline-planner-export.json');
+    }
+
+    function exportXlsx() {
+      if (!window.XLSX) {
+        alert('Library XLSX belum termuat.');
+        return;
+      }
+      const xlsxRows = exportRows().map(r => ({
+        No: r.no,
+        Task: r.task,
+        Deskripsi: r.description,
+        Mulai: formatDateSafe(r.start),
+        Selesai: formatDateSafe(r.end),
+        Progress: `${r.progress}%`,
+        Status: r.status,
+        SelesaiChecklist: r.checked,
+        Lampiran: r.attachments || '-',
+        DetailURL: r.detailUrl
+      }));
+      const sheet = window.XLSX.utils.json_to_sheet(xlsxRows);
+      const wb = window.XLSX.utils.book_new();
+      window.XLSX.utils.book_append_sheet(wb, sheet, 'Tasks');
+      window.XLSX.writeFile(wb, 'timeline-planner-export.xlsx');
+    }
+
+    function exportPdf() {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('Library PDF belum termuat.');
+        return;
+      }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+      doc.setFontSize(14);
+      doc.text('Timeline Planner Export', 40, 36);
+
+      const body = exportRows().map(r => [
+        r.no,
+        r.task,
+        r.description,
+        formatDateSafe(r.start),
+        formatDateSafe(r.end),
+        `${r.progress}%`,
+        r.status,
+        r.checked,
+        r.attachments || '-',
+        r.detailUrl
+      ]);
+
+      doc.autoTable({
+        head: [['No', 'Task', 'Description', 'Start', 'End', 'Progress', 'Status', 'Done', 'Attachments', 'Detail URL']],
+        body,
+        startY: 50,
+        styles: { fontSize: 8, cellPadding: 4 },
+        headStyles: { fillColor: [11, 122, 117] }
+      });
+
+      doc.save('timeline-planner-export.pdf');
+    }
+
+    searchInput.addEventListener('input', render);
+    filterStatus.addEventListener('change', render);
+
+    clearBtn.addEventListener('click', () => {
+      const ok = confirm('Hapus semua task?');
+      if (!ok) return;
+      tasks = [];
+      saveTasks();
+      render();
+    });
+
+    exportBtn.addEventListener('click', () => {
+      const type = exportType.value;
+      if (type === 'xlsx') {
+        exportXlsx();
+        return;
+      }
+      if (type === 'pdf') {
+        exportPdf();
+        return;
+      }
+      exportJson();
+    });
+
+    loadPlanBtn.addEventListener('click', () => {
+      const today = toISO(new Date());
+      if (!planStartInput.value) planStartInput.value = today;
+      if (!planEndInput.value) planEndInput.value = toISO(addDays(new Date(), 27));
+      planDialog.showModal();
+    });
+
+    planCancelBtn.addEventListener('click', () => {
+      planDialog.close();
+    });
+
+    planApplyBtn.addEventListener('click', () => {
+      const start = planStartInput.value;
+      const end = planEndInput.value;
+      if (!start || !end) {
+        alert('Tanggal mulai dan selesai wajib diisi.');
+        return;
+      }
+      if (normalize(end) < normalize(start)) {
+        alert('Tanggal selesai tidak boleh sebelum tanggal mulai.');
+        return;
+      }
+
+      const plan = generatePlanForRange(start, end);
+      const ok = confirm(`Muat plan untuk rentang ${getPlanRange(plan)}? Ini akan mengganti task saat ini.`);
+      if (!ok) return;
+
+      tasks = plan;
+      saveTasks();
+      render();
+      planDialog.close();
+    });
+
+    window.removeTask = function(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      saveTasks();
+      render();
+    };
+
+    window.toggleCheck = function(id, checked) {
+      const t = tasks.find(x => x.id === id);
+      if (!t) return;
+      t.checked = checked;
+      if (checked) {
+        t.status = 'done';
+        t.progress = 100;
+      }
+      saveTasks();
+      render();
+    };
+
+    render();
+  </script>
+</body>
+</html>

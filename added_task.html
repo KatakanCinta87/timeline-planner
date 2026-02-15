@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tambah Task</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #10233a;
+      --muted: #607287;
+      --line: #d7e2ee;
+      --primary: #0b7a75;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      padding: 20px;
+    }
+
+    .wrap {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    h1 { margin: 0 0 4px; font-size: clamp(22px, 3vw, 30px); }
+    .sub { color: var(--muted); }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    input, select, textarea, button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      font: inherit;
+      background: #fff;
+    }
+
+    textarea { resize: vertical; min-height: 90px; }
+
+    button {
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-secondary {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      text-decoration: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: auto;
+    }
+
+    .note {
+      grid-column: 1 / -1;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .actions {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .actions > * { width: auto; }
+
+    @media (max-width: 800px) {
+      form { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>Tambah Task</h1>
+      <div class="sub">Seluruh field penambahan task dipindahkan ke halaman ini.</div>
+    </section>
+
+    <section class="card">
+      <form id="addTaskForm">
+        <div>
+          <label for="name">Task</label>
+          <input id="name" required placeholder="Contoh: Riset pasar" />
+        </div>
+        <div>
+          <label for="progress">Progress (%)</label>
+          <input id="progress" type="number" min="0" max="100" value="0" required />
+        </div>
+        <div>
+          <label for="start">Mulai</label>
+          <input id="start" type="date" required />
+        </div>
+        <div>
+          <label for="end">Selesai</label>
+          <input id="end" type="date" required />
+        </div>
+        <div>
+          <label for="status">Status</label>
+          <select id="status">
+            <option value="plan">Planned</option>
+            <option value="doing">In Progress</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+        <div>
+          <label for="attachments">Lampiran</label>
+          <input id="attachments" type="file" multiple accept=".docx,.pdf,.xlsx,image/*" />
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label for="description">Deskripsi</label>
+          <textarea id="description" placeholder="Detail singkat task"></textarea>
+        </div>
+        <div class="note">Format lampiran: DOCX, PDF, XLSX, dan semua gambar.</div>
+        <div class="actions">
+          <button type="submit">Simpan Task</button>
+          <a href="index.html" class="btn-secondary">Batal</a>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'timeline_planner_tasks_v2';
+    const ALLOWED_FILE_TYPES = new Set([
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ]);
+
+    const form = document.getElementById('addTaskForm');
+    const attachmentsInput = document.getElementById('attachments');
+
+    function loadTasks() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        return raw.map(t => ({
+          id: t.id || crypto.randomUUID(),
+          name: t.name || '',
+          description: t.description ?? t.owner ?? '',
+          start: t.start || '',
+          end: t.end || '',
+          progress: Number.isFinite(Number(t.progress)) ? Number(t.progress) : 0,
+          status: ['plan', 'doing', 'done'].includes(t.status) ? t.status : 'plan',
+          checked: Boolean(t.checked),
+          attachments: Array.isArray(t.attachments) ? t.attachments : []
+        }));
+      } catch {
+        return [];
+      }
+    }
+
+    function saveTasks(tasks) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    function normalize(dateStr) {
+      return new Date(dateStr + 'T00:00:00');
+    }
+
+    function isAllowedFile(file) {
+      return file.type.startsWith('image/') || ALLOWED_FILE_TYPES.has(file.type);
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error(`Gagal baca file ${file.name}`));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function filesToAttachments(fileList) {
+      const files = Array.from(fileList || []);
+      const attachments = [];
+      let skipped = 0;
+      for (const f of files) {
+        if (!isAllowedFile(f)) {
+          skipped += 1;
+          continue;
+        }
+        const dataUrl = await readFileAsDataUrl(f);
+        attachments.push({
+          name: f.name,
+          type: f.type,
+          size: f.size,
+          dataUrl
+        });
+      }
+      return { attachments, skipped };
+    }
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const tasks = loadTasks();
+      const uploaded = await filesToAttachments(attachmentsInput.files);
+
+      if (uploaded.skipped > 0) {
+        alert(`${uploaded.skipped} file dilewati karena extension/tipe tidak didukung.`);
+      }
+
+      const data = {
+        id: crypto.randomUUID(),
+        name: document.getElementById('name').value.trim(),
+        description: document.getElementById('description').value.trim(),
+        start: document.getElementById('start').value,
+        end: document.getElementById('end').value,
+        progress: Number(document.getElementById('progress').value),
+        status: document.getElementById('status').value,
+        checked: false,
+        attachments: uploaded.attachments
+      };
+
+      if (!data.name || !data.start || !data.end) {
+        alert('Task, tanggal mulai, dan tanggal selesai wajib diisi.');
+        return;
+      }
+      if (Number.isNaN(data.progress) || data.progress < 0 || data.progress > 100) {
+        alert('Progress harus 0 sampai 100.');
+        return;
+      }
+      if (normalize(data.end) < normalize(data.start)) {
+        alert('Tanggal selesai tidak boleh sebelum tanggal mulai.');
+        return;
+      }
+
+      if (data.progress === 100 || data.status === 'done') {
+        data.progress = 100;
+        data.status = 'done';
+        data.checked = true;
+      }
+
+      tasks.push(data);
+      saveTasks(tasks);
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>

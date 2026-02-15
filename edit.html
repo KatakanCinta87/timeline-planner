@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Task</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #10233a;
+      --muted: #607287;
+      --line: #d7e2ee;
+      --primary: #0b7a75;
+      --danger: #b42318;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      padding: 20px;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    h1 { margin: 0 0 4px; font-size: clamp(22px, 3vw, 30px); }
+    .sub { color: var(--muted); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    input, select, textarea, button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      font: inherit;
+      background: #fff;
+    }
+
+    textarea { resize: vertical; min-height: 100px; }
+
+    .readonly {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfdff;
+      color: var(--muted);
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+    }
+
+    .attachments {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .attach-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .attach-item a {
+      color: #0a4f88;
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    .attach-item a:hover { text-decoration: underline; }
+
+    .remove-btn {
+      width: auto;
+      background: #fff;
+      color: var(--danger);
+      border: 1px solid #f3c6c6;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .actions button, .actions a {
+      width: auto;
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-secondary {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 700px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>Edit Task</h1>
+      <div class="sub">Ubah nama, deskripsi, progress, status, dan lampiran task.</div>
+    </section>
+
+    <section class="card" id="missing" style="display:none;">
+      <div class="sub">Task tidak ditemukan. Kembali ke daftar task.</div>
+      <div style="margin-top:10px;">
+        <a href="index.html" class="btn-secondary">Kembali ke Timeline Planner</a>
+      </div>
+    </section>
+
+    <section class="card" id="content" style="display:none;">
+      <form id="editForm">
+        <div class="grid">
+          <div class="field">
+            <label for="name">Task</label>
+            <input id="name" required />
+          </div>
+          <div class="field">
+            <label for="progress">Progress (%)</label>
+            <input id="progress" type="number" min="0" max="100" required />
+          </div>
+          <div class="field">
+            <label for="status">Status</label>
+            <select id="status">
+              <option value="plan">Planned</option>
+              <option value="doing">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tanggal</label>
+            <div id="dateInfo" class="readonly">-</div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:10px;">
+          <label for="description">Deskripsi</label>
+          <textarea id="description"></textarea>
+        </div>
+
+        <div class="field" style="margin-top:10px;">
+          <label>Lampiran Saat Ini</label>
+          <div id="attachmentsList" class="attachments"></div>
+        </div>
+
+        <div class="field" style="margin-top:10px;">
+          <label for="newAttachments">Tambah Lampiran</label>
+          <input id="newAttachments" type="file" multiple accept=".docx,.pdf,.xlsx,image/*" />
+          <div class="note">Format: DOCX, PDF, XLSX, dan semua gambar.</div>
+        </div>
+
+        <div class="actions" style="margin-top:12px;">
+          <button class="primary" type="submit">Simpan Perubahan</button>
+          <a id="backToDetail" class="btn-secondary" href="task.html">Kembali ke Detail</a>
+          <a class="btn-secondary" href="index.html">Kembali ke Index</a>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'timeline_planner_tasks_v2';
+    const ALLOWED_FILE_TYPES = new Set([
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ]);
+
+    const id = new URLSearchParams(window.location.search).get('id');
+    const missingEl = document.getElementById('missing');
+    const contentEl = document.getElementById('content');
+    const form = document.getElementById('editForm');
+    const attachmentsList = document.getElementById('attachmentsList');
+    const newAttachmentsInput = document.getElementById('newAttachments');
+    const backToDetail = document.getElementById('backToDetail');
+
+    let tasks = [];
+    let taskIndex = -1;
+    let workingAttachments = [];
+
+    function loadTasks() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      } catch {
+        return [];
+      }
+    }
+
+    function saveTasks(nextTasks) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextTasks));
+    }
+
+    function formatDate(dateStr) {
+      return new Date(dateStr + 'T00:00:00').toLocaleDateString('id-ID', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      });
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function normalize(dateStr) {
+      return new Date(dateStr + 'T00:00:00');
+    }
+
+    function isAllowedFile(file) {
+      return file.type.startsWith('image/') || ALLOWED_FILE_TYPES.has(file.type);
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error(`Gagal baca file ${file.name}`));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function filesToAttachments(fileList) {
+      const files = Array.from(fileList || []);
+      const attachments = [];
+      let skipped = 0;
+
+      for (const f of files) {
+        if (!isAllowedFile(f)) {
+          skipped += 1;
+          continue;
+        }
+        const dataUrl = await readFileAsDataUrl(f);
+        attachments.push({
+          name: f.name,
+          type: f.type,
+          size: f.size,
+          dataUrl
+        });
+      }
+
+      return { attachments, skipped };
+    }
+
+    function renderAttachments() {
+      if (!workingAttachments.length) {
+        attachmentsList.innerHTML = '<div class="note">Tidak ada lampiran.</div>';
+        return;
+      }
+
+      attachmentsList.innerHTML = workingAttachments.map((f, idx) => `
+        <div class="attach-item">
+          <a href="${f.dataUrl}" download="${escapeHtml(f.name)}">${escapeHtml(f.name)}</a>
+          <button type="button" class="remove-btn" onclick="removeAttachment(${idx})">Hapus</button>
+        </div>
+      `).join('');
+    }
+
+    window.removeAttachment = function(idx) {
+      workingAttachments = workingAttachments.filter((_, i) => i !== idx);
+      renderAttachments();
+    };
+
+    function init() {
+      tasks = loadTasks();
+      taskIndex = tasks.findIndex(t => t.id === id);
+
+      if (!id || taskIndex === -1) {
+        missingEl.style.display = '';
+        return;
+      }
+
+      const task = tasks[taskIndex];
+      workingAttachments = Array.isArray(task.attachments) ? [...task.attachments] : [];
+
+      document.getElementById('name').value = task.name || '';
+      document.getElementById('description').value = task.description || '';
+      document.getElementById('progress').value = Number(task.progress) || 0;
+      document.getElementById('status').value = ['plan', 'doing', 'done'].includes(task.status) ? task.status : 'plan';
+      document.getElementById('dateInfo').textContent = `${formatDate(task.start)} - ${formatDate(task.end)}`;
+      backToDetail.href = `task.html?id=${encodeURIComponent(id)}`;
+
+      renderAttachments();
+      contentEl.style.display = '';
+
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value.trim();
+        const description = document.getElementById('description').value.trim();
+        const progress = Number(document.getElementById('progress').value);
+        const status = document.getElementById('status').value;
+
+        if (!name) {
+          alert('Nama task wajib diisi.');
+          return;
+        }
+        if (Number.isNaN(progress) || progress < 0 || progress > 100) {
+          alert('Progress harus 0 sampai 100.');
+          return;
+        }
+
+        const target = tasks[taskIndex];
+        if (!target) return;
+        if (normalize(target.end) < normalize(target.start)) {
+          alert('Tanggal task tidak valid (selesai sebelum mulai).');
+          return;
+        }
+
+        const uploaded = await filesToAttachments(newAttachmentsInput.files);
+        if (uploaded.skipped > 0) {
+          alert(`${uploaded.skipped} file dilewati karena extension/tipe tidak didukung.`);
+        }
+
+        target.name = name;
+        target.description = description;
+        target.progress = progress;
+        target.status = ['plan', 'doing', 'done'].includes(status) ? status : 'plan';
+        target.checked = target.status === 'done' || progress === 100;
+        if (target.checked) {
+          target.status = 'done';
+          target.progress = 100;
+        }
+
+        target.attachments = [...workingAttachments, ...uploaded.attachments];
+
+        saveTasks(tasks);
+        window.location.href = `task.html?id=${encodeURIComponent(id)}`;
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

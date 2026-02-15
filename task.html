@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Detail</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #10233a;
+      --muted: #607287;
+      --line: #d7e2ee;
+      --primary: #0b7a75;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      padding: 20px;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    h1 { margin: 0 0 4px; font-size: clamp(22px, 3vw, 30px); }
+    .sub { color: var(--muted); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .value { font-size: 15px; }
+
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .st-plan { background: #e8f0ff; color: #2647a6; }
+    .st-doing { background: #fff3d8; color: #975a00; }
+    .st-done { background: #ddf7e6; color: #1f7a42; }
+
+    .bar-wrap {
+      width: 100%;
+      background: #eef3f9;
+      border-radius: 999px;
+      height: 12px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .bar {
+      height: 12px;
+      background: var(--primary);
+      width: 0%;
+      transition: width .2s ease;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    input, select, button {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      font: inherit;
+      background: #fff;
+    }
+
+    button {
+      cursor: pointer;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      font-weight: 600;
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .attachments a {
+      display: block;
+      margin: 4px 0;
+      color: #0a4f88;
+      text-decoration: none;
+    }
+    .attachments a:hover { text-decoration: underline; }
+
+    @media (max-width: 700px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1 id="title">Task Detail</h1>
+      <div class="sub">Halaman khusus per task.</div>
+    </section>
+
+    <section class="card" id="missing" style="display:none;">
+      <div class="sub">Task tidak ditemukan. Kembali ke daftar task.</div>
+      <div style="margin-top:10px;">
+        <a href="index.html">Kembali ke Timeline Planner</a>
+      </div>
+    </section>
+
+    <section class="card" id="content" style="display:none;">
+      <div class="grid">
+        <div class="item">
+          <div class="label">Task</div>
+          <div class="value" id="taskName"></div>
+        </div>
+        <div class="item">
+          <div class="label">Status</div>
+          <div class="value"><span id="taskStatus" class="status"></span></div>
+        </div>
+        <div class="item">
+          <div class="label">Tanggal</div>
+          <div class="value" id="taskDate"></div>
+        </div>
+        <div class="item">
+          <div class="label">Checklist</div>
+          <div class="value"><input id="taskChecked" type="checkbox" /> Tandai selesai</div>
+        </div>
+      </div>
+
+      <div class="item" style="margin-top:10px;">
+        <div class="label">Deskripsi</div>
+        <div class="value" id="taskDescription"></div>
+      </div>
+
+      <div class="item" style="margin-top:10px;">
+        <div class="label">Progress</div>
+        <div class="value"><span id="taskProgressText">0%</span></div>
+        <div class="bar-wrap"><div id="taskBar" class="bar"></div></div>
+      </div>
+
+      <div class="item attachments" style="margin-top:10px;">
+        <div class="label">Lampiran</div>
+        <div id="taskAttachments" class="value"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="actions">
+        <input id="progressInput" type="number" min="0" max="100" placeholder="Update progress (0-100)" />
+        <select id="statusInput">
+          <option value="plan">Planned</option>
+          <option value="doing">In Progress</option>
+          <option value="done">Done</option>
+        </select>
+        <button id="saveBtn">Simpan Update</button>
+        <a id="editLink" href="edit.html"><button class="btn-secondary" type="button">Edit Halaman Penuh</button></a>
+        <select id="detailExportType">
+          <option value="json">Export JSON</option>
+          <option value="xlsx">Export XLSX</option>
+          <option value="pdf">Export PDF</option>
+        </select>
+        <button id="detailExportBtn" type="button">Export Task</button>
+        <a href="index.html"><button class="btn-secondary" type="button">Kembali ke Index</button></a>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script>
+    const STORAGE_KEY = 'timeline_planner_tasks_v2';
+    const id = new URLSearchParams(window.location.search).get('id');
+    const missingEl = document.getElementById('missing');
+    const contentEl = document.getElementById('content');
+    const saveBtn = document.getElementById('saveBtn');
+    const editLink = document.getElementById('editLink');
+    const detailExportBtn = document.getElementById('detailExportBtn');
+    const detailExportType = document.getElementById('detailExportType');
+
+    function loadTasks() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      } catch {
+        return [];
+      }
+    }
+
+    function saveTasks(tasks) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    function statusLabel(status) {
+      if (status === 'doing') return 'In Progress';
+      if (status === 'done') return 'Done';
+      return 'Planned';
+    }
+
+    function statusClass(status) {
+      if (status === 'doing') return 'st-doing';
+      if (status === 'done') return 'st-done';
+      return 'st-plan';
+    }
+
+    function formatDate(dateStr) {
+      return new Date(dateStr + 'T00:00:00').toLocaleDateString('id-ID', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      });
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function formatDateSafe(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + 'T00:00:00');
+      if (Number.isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    function taskExportRow(task) {
+      return {
+        id: task.id || '',
+        task: task.name || '',
+        description: task.description || '',
+        start: task.start || '',
+        end: task.end || '',
+        progress: Number(task.progress) || 0,
+        status: statusLabel(task.status),
+        checked: Boolean(task.checked) ? 'Yes' : 'No',
+        attachments: (Array.isArray(task.attachments) ? task.attachments : []).map(f => f.name).join(', '),
+        detailUrl: `task.html?id=${encodeURIComponent(task.id || '')}`
+      };
+    }
+
+    function triggerDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportTaskJson(task) {
+      const blob = new Blob([JSON.stringify(task, null, 2)], { type: 'application/json' });
+      triggerDownload(blob, `task-${task.id || 'detail'}.json`);
+    }
+
+    function exportTaskXlsx(task) {
+      if (!window.XLSX) {
+        alert('Library XLSX belum termuat.');
+        return;
+      }
+      const r = taskExportRow(task);
+      const sheet = window.XLSX.utils.json_to_sheet([{
+        ID: r.id,
+        Task: r.task,
+        Deskripsi: r.description,
+        Mulai: formatDateSafe(r.start),
+        Selesai: formatDateSafe(r.end),
+        Progress: `${r.progress}%`,
+        Status: r.status,
+        SelesaiChecklist: r.checked,
+        Lampiran: r.attachments || '-',
+        DetailURL: r.detailUrl
+      }]);
+      const wb = window.XLSX.utils.book_new();
+      window.XLSX.utils.book_append_sheet(wb, sheet, 'Task');
+      window.XLSX.writeFile(wb, `task-${task.id || 'detail'}.xlsx`);
+    }
+
+    function exportTaskPdf(task) {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('Library PDF belum termuat.');
+        return;
+      }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+      const r = taskExportRow(task);
+
+      doc.setFontSize(14);
+      doc.text('Task Detail Export', 40, 36);
+      doc.autoTable({
+        head: [['ID', 'Task', 'Description', 'Start', 'End', 'Progress', 'Status', 'Done', 'Attachments', 'Detail URL']],
+        body: [[
+          r.id,
+          r.task,
+          r.description,
+          formatDateSafe(r.start),
+          formatDateSafe(r.end),
+          `${r.progress}%`,
+          r.status,
+          r.checked,
+          r.attachments || '-',
+          r.detailUrl
+        ]],
+        startY: 50,
+        styles: { fontSize: 9, cellPadding: 4 },
+        headStyles: { fillColor: [11, 122, 117] }
+      });
+
+      doc.save(`task-${task.id || 'detail'}.pdf`);
+    }
+
+    function renderTask(task) {
+      document.getElementById('title').textContent = task.name;
+      document.getElementById('taskName').textContent = task.name;
+      document.getElementById('taskDate').textContent = `${formatDate(task.start)} - ${formatDate(task.end)}`;
+      document.getElementById('taskDescription').textContent = task.description || '-';
+
+      const statusEl = document.getElementById('taskStatus');
+      statusEl.textContent = statusLabel(task.status);
+      statusEl.className = `status ${statusClass(task.status)}`;
+
+      const pct = Number(task.progress) || 0;
+      document.getElementById('taskProgressText').textContent = `${pct}%`;
+      document.getElementById('taskBar').style.width = `${pct}%`;
+
+      const checked = document.getElementById('taskChecked');
+      checked.checked = Boolean(task.checked);
+
+      const attachEl = document.getElementById('taskAttachments');
+      const attachments = Array.isArray(task.attachments) ? task.attachments : [];
+      if (!attachments.length) {
+        attachEl.innerHTML = '<span style="color:#607287;">Tidak ada lampiran.</span>';
+      } else {
+        attachEl.innerHTML = attachments
+          .map(f => `<a href="${f.dataUrl}" download="${escapeHtml(f.name)}">${escapeHtml(f.name)}</a>`)
+          .join('');
+      }
+
+      document.getElementById('progressInput').value = pct;
+      document.getElementById('statusInput').value = task.status;
+    }
+
+    function init() {
+      const tasks = loadTasks();
+      const idx = tasks.findIndex(t => t.id === id);
+
+      if (!id || idx === -1) {
+        missingEl.style.display = '';
+        return;
+      }
+
+      contentEl.style.display = '';
+      editLink.href = `edit.html?id=${encodeURIComponent(id)}`;
+      renderTask(tasks[idx]);
+
+      saveBtn.addEventListener('click', () => {
+        const progress = Number(document.getElementById('progressInput').value);
+        const status = document.getElementById('statusInput').value;
+        const checked = document.getElementById('taskChecked').checked;
+
+        if (Number.isNaN(progress) || progress < 0 || progress > 100) {
+          alert('Progress harus 0 sampai 100.');
+          return;
+        }
+
+        tasks[idx].progress = progress;
+        tasks[idx].status = status;
+        tasks[idx].checked = checked;
+
+        if (checked) {
+          tasks[idx].status = 'done';
+          tasks[idx].progress = 100;
+        }
+
+        saveTasks(tasks);
+        renderTask(tasks[idx]);
+      });
+
+      detailExportBtn.addEventListener('click', () => {
+        const currentTask = tasks[idx];
+        if (!currentTask) return;
+        const type = detailExportType.value;
+        if (type === 'xlsx') {
+          exportTaskXlsx(currentTask);
+          return;
+        }
+        if (type === 'pdf') {
+          exportTaskPdf(currentTask);
+          return;
+        }
+        exportTaskJson(currentTask);
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
