@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, shrink-to-fit=no" />
   <title>Timeline Planner</title>
   <style>
     :root {
@@ -18,10 +18,15 @@
     }
 
     * { box-sizing: border-box; }
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
     body {
       margin: 0;
       font-family: "Segoe UI", Tahoma, sans-serif;
       color: var(--text);
+      overflow-x: hidden;
       background:
         radial-gradient(circle at 20% 20%, #e9f5ff 0%, transparent 30%),
         radial-gradient(circle at 80% 0%, #fff0d8 0%, transparent 25%),
@@ -41,6 +46,7 @@
       border: 1px solid var(--line);
       border-radius: 14px;
       padding: 16px;
+      overflow: hidden;
       box-shadow: 0 8px 24px rgba(9, 30, 66, 0.06);
     }
 
@@ -50,13 +56,6 @@
     }
 
     .sub { color: var(--muted); margin-top: 4px; }
-
-    form {
-      display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 10px;
-      align-items: end;
-    }
 
     label {
       display: block;
@@ -84,6 +83,25 @@
     }
 
     button:hover { filter: brightness(0.95); }
+
+    .btn-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      text-decoration: none;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 600;
+      min-height: 44px;
+      line-height: 1.2;
+    }
+
+    .btn-link:hover { filter: brightness(0.95); }
 
     .controls {
       display: flex;
@@ -130,11 +148,39 @@
       width: auto;
       padding: 6px 9px;
       font-size: 12px;
-      margin-right: 4px;
       border-radius: 8px;
       border: 1px solid var(--line);
       background: #fff;
       color: var(--text);
+    }
+
+    .action-bar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 0;
+    }
+
+    .action-bar > * {
+      min-width: 0;
+    }
+
+    .action-bar > a:first-child {
+      grid-column: 1 / -1;
+    }
+
+    .row-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      width: 100%;
+    }
+
+    .btn-inline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
     }
 
     .timeline {
@@ -176,6 +222,11 @@
       background: #fff;
       z-index: 1;
       border-right: 1px solid var(--line);
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.25;
+      overflow: hidden;
     }
 
     .time-row .time-title { background: #fff; }
@@ -210,6 +261,14 @@
       margin-top: 6px;
     }
 
+    input[type="checkbox"] {
+      width: 18px;
+      min-height: 18px;
+      height: 18px;
+      padding: 0;
+      accent-color: var(--primary);
+    }
+
     dialog {
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -234,9 +293,118 @@
       margin-top: 4px;
     }
 
-    @media (max-width: 900px) {
-      form { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 1024px) {
+      .wrap {
+        margin: 16px auto;
+        padding: 0 12px 18px;
+      }
+      .card { padding: 14px; }
+      th, td { font-size: 13px; padding: 9px 7px; }
+      .time-header, .time-row { grid-template-columns: 180px repeat(var(--days), minmax(22px, 1fr)); }
+      .action-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 768px) {
+      .controls { gap: 8px; }
+      .controls > * { flex: 1 1 100%; }
+      input, select, button, textarea {
+        min-height: 44px;
+        font-size: 16px;
+      }
+      .action-bar { grid-template-columns: 1fr; }
+      .btn-small,
+      #exportBtn,
+      #loadPlanBtn,
+      #clearBtn {
+        width: 100%;
+      }
+      table { min-width: 0; }
       .time-header, .time-row { grid-template-columns: 170px repeat(var(--days), minmax(24px, 1fr)); }
+    }
+
+    @media (max-width: 820px) {
+      .table-wrap { overflow: visible; }
+      table, tbody, tr, td {
+        display: block;
+        width: 100%;
+      }
+      thead { display: none; }
+      table { min-width: 0; }
+      tr {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px;
+        margin-bottom: 10px;
+        background: #fff;
+      }
+      td {
+        border-bottom: 1px dashed #e9eff6;
+        padding: 8px 6px;
+        text-align: left;
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        gap: 8px;
+        align-items: start;
+      }
+      td:last-child { border-bottom: 0; }
+      td::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      td[data-label="Done"] {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px dashed #e9eff6;
+        padding-bottom: 8px;
+      }
+      td[data-label="Done"]::before {
+        min-width: 110px;
+        margin-bottom: 0;
+      }
+      td[data-label="Done"] input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        min-height: 20px;
+      }
+      td {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .row-actions .btn-small {
+        min-height: 36px;
+        font-size: 13px;
+        width: 100%;
+      }
+      .row-actions a.btn-inline {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 560px) {
+      body { font-size: 14px; }
+      .wrap {
+        margin: 10px auto;
+        padding: 0 10px 14px;
+        gap: 10px;
+      }
+      .card { padding: 12px; border-radius: 12px; }
+      .action-bar { grid-template-columns: 1fr; }
+      .sub { overflow-wrap: anywhere; }
+      table { min-width: 0; }
+      th, td { font-size: 12px; padding: 8px 6px; }
+      .time-header, .time-row { grid-template-columns: 140px repeat(var(--days), minmax(20px, 1fr)); }
+      .time-cell { padding: 6px; font-size: 11px; }
+      .time-title { font-size: 12px; }
+      .time-row .time-title span { display: inline; }
+      .dialog-body { padding: 12px; }
+      .dialog-actions {
+        flex-direction: column;
+      }
+      .dialog-actions button { width: 100%; }
+      .row-actions { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -248,12 +416,10 @@
     </section>
 
     <section class="card">
-      <div class="controls" style="margin-top:0;">
-        <a href="added_task.html" style="flex:1 1 420px;text-decoration:none;">
-          <button type="button" style="width:100%;">Tambah Task</button>
-        </a>
+      <div class="controls action-bar" style="margin-top:0;">
+        <a href="added_task.html" class="btn-link">Tambah Task</a>
         <button type="button" id="loadPlanBtn" class="btn-small">Load Plan (Pilih Tanggal)</button>
-        <select id="exportType" class="btn-small" style="width:auto;">
+        <select id="exportType" class="btn-small">
           <option value="json">Export JSON</option>
           <option value="xlsx">Export XLSX</option>
           <option value="pdf">Export PDF</option>
@@ -272,6 +438,7 @@
           <option value="doing">In Progress</option>
           <option value="done">Done</option>
         </select>
+        <button type="button" id="sortDateBtn" class="btn-small">Hapus Sort Tanggal</button>
       </div>
       <div class="table-wrap" style="margin-top:10px;">
         <table>
@@ -319,10 +486,6 @@
   </dialog>
 
   <script type="module">
-    import ExcelJS from 'exceljs';
-    import { jsPDF } from 'jspdf';
-    import autoTable from 'jspdf-autotable';
-
     const STORAGE_KEY = 'timeline_planner_tasks_v2';
     const STORAGE_WARN_BYTES = 3_500_000;
     let storageWarned = false;
@@ -331,6 +494,7 @@
     const meta = document.getElementById('meta');
     const searchInput = document.getElementById('search');
     const filterStatus = document.getElementById('filterStatus');
+    const sortDateBtn = document.getElementById('sortDateBtn');
     const clearBtn = document.getElementById('clearBtn');
     const exportType = document.getElementById('exportType');
     const exportBtn = document.getElementById('exportBtn');
@@ -422,7 +586,15 @@
     ];
 
     let tasks = loadTasks();
+    let sortByDate = true;
     seedInitialDatasetIfEmpty();
+
+    function uid() {
+      if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
+        return globalThis.crypto.randomUUID();
+      }
+      return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
 
     function estimateStorageBytes(nextTasks) {
       return new Blob([JSON.stringify(nextTasks)]).size;
@@ -450,7 +622,7 @@
           const hasId = Boolean(t.id);
           if (!hasId) dirty = true;
           return {
-            id: hasId ? t.id : crypto.randomUUID(),
+            id: hasId ? t.id : uid(),
             name: t.name || '',
             description: t.description ?? t.owner ?? '',
             start: t.start || '',
@@ -479,7 +651,7 @@
       const templateMaxOffset = PLAN_TEMPLATE.reduce((m, t) => Math.max(m, t.endOffset), 0) || 1;
 
       return PLAN_TEMPLATE.map(item => ({
-        id: crypto.randomUUID(),
+        id: uid(),
         name: item.name,
         description: item.description,
         start: toISO(addDays(startDate, Math.round((item.startOffset / templateMaxOffset) * totalDays))),
@@ -546,13 +718,20 @@
     function render() {
       const q = searchInput.value.trim().toLowerCase();
       const st = filterStatus.value;
-      const filtered = tasks
+      let filtered = tasks
         .filter(t => st === 'all' || t.status === st)
-        .filter(t => !q || `${t.name} ${t.description}`.toLowerCase().includes(q))
-        .sort((a, b) => normalize(a.start) - normalize(b.start));
+        .filter(t => !q || `${t.name} ${t.description}`.toLowerCase().includes(q));
+
+      if (sortByDate) {
+        filtered = filtered.sort((a, b) => normalize(a.start) - normalize(b.start));
+      }
 
       renderTable(filtered);
       renderTimeline(filtered);
+    }
+
+    function syncSortButtonLabel() {
+      sortDateBtn.textContent = sortByDate ? 'Hapus Sort Tanggal' : 'Aktifkan Sort Tanggal';
     }
 
     function renderTable(list) {
@@ -570,17 +749,19 @@
 
         return `
           <tr>
-            <td><input type="checkbox" ${t.checked ? 'checked' : ''} onchange="toggleCheck('${t.id}', this.checked)" /></td>
-            <td ${deco}><a href="${taskDetailUrl(t.id)}">${escapeHtml(t.name)}</a></td>
-            <td>${escapeHtml(t.description || '-')}</td>
-            <td>${formatDate(t.start)}</td>
-            <td>${formatDate(t.end)}</td>
-            <td>${Number(t.progress)}%</td>
-            <td><span class="status ${badgeClass}">${statusLabel(t.status)}</span></td>
-            <td>${attachments}</td>
-            <td>
-              <a href="${editTaskUrl(t.id)}"><button class="btn-small" type="button">Edit</button></a>
-              <button class="btn-small" onclick="removeTask('${t.id}')">Hapus</button>
+            <td data-label="Done"><input type="checkbox" ${t.checked ? 'checked' : ''} onchange="toggleCheck('${t.id}', this.checked)" /></td>
+            <td data-label="Task" ${deco}><a href="${taskDetailUrl(t.id)}">${escapeHtml(t.name)}</a></td>
+            <td data-label="Deskripsi">${escapeHtml(t.description || '-')}</td>
+            <td data-label="Mulai">${formatDate(t.start)}</td>
+            <td data-label="Selesai">${formatDate(t.end)}</td>
+            <td data-label="Progress">${Number(t.progress)}%</td>
+            <td data-label="Status"><span class="status ${badgeClass}">${statusLabel(t.status)}</span></td>
+            <td data-label="Lampiran">${attachments}</td>
+            <td data-label="Aksi">
+              <div class="row-actions">
+                <a href="${editTaskUrl(t.id)}" class="btn-small btn-inline">Edit</a>
+                <button class="btn-small" onclick="removeTask('${t.id}')">Hapus</button>
+              </div>
             </td>
           </tr>
         `;
@@ -697,6 +878,7 @@
     }
 
     async function exportXlsx() {
+      const { default: ExcelJS } = await import('exceljs');
       const xlsxRows = exportRows().map(r => ({
         No: r.no,
         Task: r.task,
@@ -731,7 +913,12 @@
       );
     }
 
-    function exportPdf() {
+    async function exportPdf() {
+      const [{ jsPDF }, autoTableMod] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ]);
+      const autoTable = autoTableMod.default || autoTableMod;
       const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
       doc.setFontSize(14);
       doc.text('Timeline Planner Export', 40, 36);
@@ -762,6 +949,11 @@
 
     searchInput.addEventListener('input', render);
     filterStatus.addEventListener('change', render);
+    sortDateBtn.addEventListener('click', () => {
+      sortByDate = !sortByDate;
+      syncSortButtonLabel();
+      render();
+    });
 
     clearBtn.addEventListener('click', () => {
       const ok = confirm('Hapus semua task?');
@@ -773,15 +965,20 @@
 
     exportBtn.addEventListener('click', async () => {
       const type = exportType.value;
-      if (type === 'xlsx') {
-        await exportXlsx();
-        return;
+      try {
+        if (type === 'xlsx') {
+          await exportXlsx();
+          return;
+        }
+        if (type === 'pdf') {
+          await exportPdf();
+          return;
+        }
+        exportJson();
+      } catch (err) {
+        console.error(err);
+        alert('Fitur export gagal dimuat di perangkat ini. Coba refresh atau gunakan JSON.');
       }
-      if (type === 'pdf') {
-        exportPdf();
-        return;
-      }
-      exportJson();
     });
 
     loadPlanBtn.addEventListener('click', () => {
@@ -835,6 +1032,7 @@
       render();
     };
 
+    syncSortButtonLabel();
     render();
   </script>
 </body>

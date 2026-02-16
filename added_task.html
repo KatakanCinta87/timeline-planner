@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, shrink-to-fit=no" />
   <title>Tambah Task</title>
   <style>
     :root {
@@ -15,10 +15,15 @@
     }
 
     * { box-sizing: border-box; }
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
     body {
       margin: 0;
       font-family: "Segoe UI", Tahoma, sans-serif;
       color: var(--text);
+      overflow-x: hidden;
       background: var(--bg);
       padding: 20px;
     }
@@ -101,8 +106,27 @@
 
     .actions > * { width: auto; }
 
+    @media (max-width: 1024px) {
+      body { padding: 14px; }
+      .card { padding: 14px; }
+    }
+
     @media (max-width: 800px) {
+      input, select, textarea, button { min-height: 44px; font-size: 16px; }
       form { grid-template-columns: 1fr; }
+      .actions > * {
+        width: 100%;
+      }
+      .btn-secondary {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 520px) {
+      body { padding: 10px; }
+      .wrap { gap: 10px; }
+      .card { padding: 12px; border-radius: 12px; }
+      h1 { font-size: 22px; }
     }
   </style>
 </head>
@@ -323,3 +347,4 @@
   </script>
 </body>
 </html>
+
