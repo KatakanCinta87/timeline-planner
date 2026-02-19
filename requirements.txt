@@ -1,0 +1,2 @@
+# This project currently has no required Python dependencies.
+# Main runtime uses Node.js (see package.json).

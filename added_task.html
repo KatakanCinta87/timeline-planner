@@ -198,11 +198,18 @@
     const form = document.getElementById('addTaskForm');
     const attachmentsInput = document.getElementById('attachments');
 
+    function uid() {
+      if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
+        return globalThis.crypto.randomUUID();
+      }
+      return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
     function loadTasks() {
       try {
         const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
         return raw.map(t => ({
-          id: t.id || crypto.randomUUID(),
+          id: t.id || uid(),
           name: t.name || '',
           description: t.description ?? t.owner ?? '',
           start: t.start || '',
@@ -303,7 +310,7 @@
       }
 
       const data = {
-        id: crypto.randomUUID(),
+        id: uid(),
         name: document.getElementById('name').value.trim(),
         description: document.getElementById('description').value.trim(),
         start: document.getElementById('start').value,
